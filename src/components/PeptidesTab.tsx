@@ -49,6 +49,9 @@ export default function PeptidesTab({ peptides, doses, onChange }: Props) {
     else onChange();
   };
 
+  const inputClass =
+    "w-full bg-zinc-50 dark:bg-zinc-950 border-2 border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 text-zinc-900 dark:text-white focus:border-lime-500 dark:focus:border-lime-400 focus:outline-none";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -64,56 +67,56 @@ export default function PeptidesTab({ peptides, doses, onChange }: Props) {
       </div>
 
       {showForm && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <div className="bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-2xl p-5 shadow-sm dark:shadow-none">
           <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase mb-4">Set Up Peptide</div>
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Name</label>
+              <label className="text-xs text-zinc-700 dark:text-zinc-300 font-medium mb-1.5 block">Name</label>
               <input
                 type="text"
                 placeholder="e.g. BPC-157, Semaglutide, TB-500"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-white focus:border-lime-400 focus:outline-none"
+                className={inputClass}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Vial amount (mg)</label>
+                <label className="text-xs text-zinc-700 dark:text-zinc-300 font-medium mb-1.5 block">Vial amount (mg)</label>
                 <input
                   type="number"
                   inputMode="decimal"
                   placeholder="e.g. 10"
                   value={mg}
                   onChange={(e) => setMg(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-white font-mono focus:border-lime-400 focus:outline-none"
+                  className={`${inputClass} font-mono`}
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Water added (ml)</label>
+                <label className="text-xs text-zinc-700 dark:text-zinc-300 font-medium mb-1.5 block">Water added (ml)</label>
                 <input
                   type="number"
                   inputMode="decimal"
                   placeholder="e.g. 2"
                   value={ml}
                   onChange={(e) => setMl(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-white font-mono focus:border-lime-400 focus:outline-none"
+                  className={`${inputClass} font-mono`}
                 />
               </div>
             </div>
 
-            <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 space-y-2">
+            <div className="bg-zinc-50 dark:bg-zinc-950 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl p-4 space-y-2">
               <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase mb-1">Auto-calc</div>
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-zinc-400">Per unit</span>
-                <span className="font-mono font-bold text-lime-400 text-lg">{mcgPerUnit.toFixed(2)} mcg</span>
+                <span className="text-sm text-zinc-700 dark:text-zinc-400">Per unit</span>
+                <span className="font-mono font-bold text-lime-600 dark:text-lime-400 text-lg">{mcgPerUnit.toFixed(2)} mcg</span>
               </div>
               <div className="flex justify-between items-baseline">
-                <span className="text-sm text-zinc-400">Concentration</span>
-                <span className="font-mono text-zinc-300">{mcgPerMl.toFixed(0)} mcg/ml</span>
+                <span className="text-sm text-zinc-700 dark:text-zinc-400">Concentration</span>
+                <span className="font-mono text-zinc-800 dark:text-zinc-300">{mcgPerMl.toFixed(0)} mcg/ml</span>
               </div>
-              <div className="text-[10px] text-zinc-600 pt-1 leading-relaxed">
+              <div className="text-[10px] text-zinc-500 dark:text-zinc-600 pt-1 leading-relaxed">
                 Based on standard U-100 insulin syringe: 100 units = 1 ml
               </div>
             </div>
@@ -129,7 +132,7 @@ export default function PeptidesTab({ peptides, doses, onChange }: Props) {
               {peptides.length > 0 && (
                 <button
                   onClick={() => { setShowForm(false); setName(""); setMg(""); setMl(""); }}
-                  className="px-4 py-3 bg-zinc-800 text-zinc-300 rounded-lg font-semibold hover:bg-zinc-700"
+                  className="px-4 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg font-semibold hover:bg-zinc-300 dark:hover:bg-zinc-700"
                 >
                   Cancel
                 </button>
@@ -144,14 +147,14 @@ export default function PeptidesTab({ peptides, doses, onChange }: Props) {
           {peptides.map((p) => {
             const count = doses.filter((d) => d.peptide_id === p.id).length;
             return (
-              <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
+              <div key={p.id} className="bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl p-4 flex items-center justify-between shadow-sm dark:shadow-none">
                 <div>
-                  <div className="font-semibold text-white">{p.name}</div>
-                  <div className="text-xs text-zinc-500 font-mono mt-0.5">
+                  <div className="font-semibold text-zinc-900 dark:text-white">{p.name}</div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-500 font-mono mt-0.5">
                     {Number(p.mg)}mg / {Number(p.ml)}ml · {Number(p.mcg_per_unit).toFixed(1)} mcg/unit · {count} doses
                   </div>
                 </div>
-                <button onClick={() => deletePep(p.id)} className="text-zinc-600 hover:text-red-400 p-2">
+                <button onClick={() => deletePep(p.id)} className="text-zinc-500 hover:text-red-500 dark:hover:text-red-400 p-2">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

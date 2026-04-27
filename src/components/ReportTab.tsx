@@ -1,12 +1,28 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Download } from "lucide-react";
 import { Peptide, Dose } from "../lib/supabase";
 
 type Props = { peptides: Peptide[]; doses: Dose[] };
 
+function useIsDark() {
+  const [isDark, setIsDark] = useState(
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+  );
+  useEffect(() => {
+    if (typeof MutationObserver === "undefined") return;
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  return isDark;
+}
+
 export default function ReportTab({ doses }: Props) {
   const [weeksAgo, setWeeksAgo] = useState(0);
+  const isDark = useIsDark();
 
   const exportCSV = () => {
     const header = "date,time,peptide,units,mcg,mg\n";
@@ -68,67 +84,70 @@ export default function ReportTab({ doses }: Props) {
     return { weekDoses: inRange, weekLabel: label, totals, dailyData: days };
   }, [doses, weeksAgo]);
 
-  const colors = ["#a3e635", "#fbbf24", "#818cf8", "#f472b6", "#22d3ee", "#fb923c"];
+  const colors = isDark
+    ? ["#a3e635", "#fbbf24", "#818cf8", "#f472b6", "#22d3ee", "#fb923c"]
+    : ["#65a30d", "#d97706", "#4f46e5", "#db2777", "#0891b2", "#ea580c"];
   const peptideNames = totals.map((t) => t.name);
 
   const totalMcg = totals.reduce((s, t) => s + t.totalMcg, 0);
   const totalDoses = totals.reduce((s, t) => s + t.count, 0);
+
+  const buttonClass =
+    "px-3 py-1.5 bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-300 rounded-lg text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-40 transition-colors";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase mb-1">Week</div>
-          <div className="text-xl font-bold">{weekLabel}</div>
+          <div className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{weekLabel}</div>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={exportCSV}
             disabled={doses.length === 0}
-            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg text-sm hover:bg-zinc-800 disabled:opacity-40 flex items-center gap-1.5"
+            className={`${buttonClass} flex items-center gap-1.5`}
             title="Export all data as CSV"
           >
             <Download className="w-3.5 h-3.5" /> Export
           </button>
-          <button
-            onClick={() => setWeeksAgo(weeksAgo + 1)}
-            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg text-sm hover:bg-zinc-800"
-          >
+          <button onClick={() => setWeeksAgo(weeksAgo + 1)} className={buttonClass}>
             ← Prev
           </button>
-          <button
-            onClick={() => setWeeksAgo(Math.max(0, weeksAgo - 1))}
-            disabled={weeksAgo === 0}
-            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-lg text-sm hover:bg-zinc-800 disabled:opacity-40"
-          >
+          <button onClick={() => setWeeksAgo(Math.max(0, weeksAgo - 1))} disabled={weeksAgo === 0} className={buttonClass}>
             Next →
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <div className="bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-2xl p-5 shadow-sm dark:shadow-none">
           <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase mb-2">Total doses</div>
-          <div className="text-3xl font-bold font-mono">{totalDoses}</div>
+          <div className="text-3xl font-bold font-mono text-zinc-900 dark:text-zinc-100">{totalDoses}</div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <div className="bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-2xl p-5 shadow-sm dark:shadow-none">
           <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase mb-2">Total mcg</div>
-          <div className="text-3xl font-bold font-mono text-lime-400">{totalMcg.toFixed(0)}</div>
+          <div className="text-3xl font-bold font-mono text-lime-600 dark:text-lime-400">{totalMcg.toFixed(0)}</div>
         </div>
       </div>
 
       {weekDoses.length > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <div className="bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-2xl p-5 shadow-sm dark:shadow-none">
           <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase mb-4">Daily breakdown (mcg)</div>
           <div style={{ width: "100%", height: 220 }}>
             <ResponsiveContainer>
               <BarChart data={dailyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                <XAxis dataKey="label" stroke="#71717a" fontSize={11} />
-                <YAxis stroke="#71717a" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#27272a" : "#e4e4e7"} vertical={false} />
+                <XAxis dataKey="label" stroke={isDark ? "#71717a" : "#52525b"} fontSize={11} />
+                <YAxis stroke={isDark ? "#71717a" : "#52525b"} fontSize={11} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: "#a1a1aa" }}
+                  contentStyle={{
+                    backgroundColor: isDark ? "#18181b" : "#ffffff",
+                    border: `2px solid ${isDark ? "#3f3f46" : "#e4e4e7"}`,
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  labelStyle={{ color: isDark ? "#a1a1aa" : "#52525b" }}
                 />
                 {peptideNames.map((name, i) => (
                   <Bar key={name} dataKey={name} stackId="a" fill={colors[i % colors.length]} />
@@ -142,35 +161,35 @@ export default function ReportTab({ doses }: Props) {
       <div>
         <div className="text-[10px] font-mono text-zinc-500 tracking-widest uppercase mb-3">By Peptide</div>
         {totals.length === 0 ? (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center text-zinc-500 text-sm">
+          <div className="bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl p-8 text-center text-zinc-500 text-sm shadow-sm dark:shadow-none">
             No doses logged this week
           </div>
         ) : (
           <div className="space-y-2">
             {totals.map((t, i) => (
-              <div key={t.name} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div key={t.name} className="bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl p-4 shadow-sm dark:shadow-none">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
-                    <div className="font-semibold">{t.name}</div>
+                    <div className="font-semibold text-zinc-900 dark:text-zinc-100">{t.name}</div>
                   </div>
                   <div className="font-mono font-bold text-lg">
                     <span style={{ color: colors[i % colors.length] }}>{t.totalMcg.toFixed(0)}</span>
                     <span className="text-zinc-500 text-sm ml-1">mcg</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-xs font-mono text-zinc-500">
+                <div className="grid grid-cols-3 gap-3 text-xs font-mono text-zinc-600 dark:text-zinc-500">
                   <div>
-                    <div className="text-zinc-600 uppercase tracking-wider text-[10px]">Doses</div>
-                    <div className="text-zinc-300 mt-0.5">{t.count}</div>
+                    <div className="text-zinc-500 dark:text-zinc-600 uppercase tracking-wider text-[10px]">Doses</div>
+                    <div className="text-zinc-800 dark:text-zinc-300 mt-0.5">{t.count}</div>
                   </div>
                   <div>
-                    <div className="text-zinc-600 uppercase tracking-wider text-[10px]">Avg/dose</div>
-                    <div className="text-zinc-300 mt-0.5">{(t.totalMcg / t.count).toFixed(1)} mcg</div>
+                    <div className="text-zinc-500 dark:text-zinc-600 uppercase tracking-wider text-[10px]">Avg/dose</div>
+                    <div className="text-zinc-800 dark:text-zinc-300 mt-0.5">{(t.totalMcg / t.count).toFixed(1)} mcg</div>
                   </div>
                   <div>
-                    <div className="text-zinc-600 uppercase tracking-wider text-[10px]">Total units</div>
-                    <div className="text-zinc-300 mt-0.5">{t.totalUnits.toFixed(1)}</div>
+                    <div className="text-zinc-500 dark:text-zinc-600 uppercase tracking-wider text-[10px]">Total units</div>
+                    <div className="text-zinc-800 dark:text-zinc-300 mt-0.5">{t.totalUnits.toFixed(1)}</div>
                   </div>
                 </div>
               </div>
