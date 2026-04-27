@@ -1,24 +1,57 @@
 import { useState } from "react";
-import { Syringe, Mail, ArrowRight } from "lucide-react";
+import { Syringe, ArrowRight, Mail } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
+type Mode = "signin" | "signup";
+
 export default function AuthScreen() {
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setError(null);
+    setInfo(null);
+  };
 
   const submit = async () => {
-    if (!email.trim()) return;
-    setSending(true);
+    if (!email.trim() || !password) return;
+    setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
-    });
-    setSending(false);
-    if (error) setError(error.message);
-    else setSent(true);
+    setInfo(null);
+
+    if (mode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      setLoading(false);
+      if (error) setError(error.message);
+      // success: App's onAuthStateChange takes over
+    } else {
+      if (password.length < 6) {
+        setLoading(false);
+        setError("Password must be at least 6 characters.");
+        return;
+      }
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+      } else if (!data.session) {
+        // email confirmation required
+        setInfo("Account created. Check your email for a confirmation link.");
+      }
+      // if data.session exists, App's onAuthStateChange takes over
+    }
   };
 
   return (
@@ -34,28 +67,42 @@ export default function AuthScreen() {
           </div>
         </div>
 
-        {sent ? (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-            <div className="w-11 h-11 rounded-full bg-lime-400/10 flex items-center justify-center mb-3">
-              <Mail className="w-5 h-5 text-lime-400" />
-            </div>
-            <h2 className="font-bold text-lg mb-1">Check your email</h2>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              We sent a login link to <span className="text-zinc-200">{email}</span>. Click it to sign in.
-            </p>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+          <div className="flex gap-2 mb-5 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
             <button
-              onClick={() => { setSent(false); setEmail(""); }}
-              className="mt-4 text-xs text-zinc-500 hover:text-zinc-300"
+              onClick={() => switchMode("signin")}
+              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-colors ${
+                mode === "signin"
+                  ? "bg-lime-400 text-zinc-950"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
             >
-              Use a different email
+              Sign in
+            </button>
+            <button
+              onClick={() => switchMode("signup")}
+              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-colors ${
+                mode === "signup"
+                  ? "bg-lime-400 text-zinc-950"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              Create account
             </button>
           </div>
-        ) : (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-            <h2 className="font-bold text-lg mb-1">Sign in</h2>
-            <p className="text-zinc-400 text-sm mb-5">Enter your email for a magic login link.</p>
 
-            <div className="space-y-3">
+          <h2 className="font-bold text-lg mb-1">
+            {mode === "signin" ? "Welcome back" : "Create your account"}
+          </h2>
+          <p className="text-zinc-400 text-sm mb-5">
+            {mode === "signin"
+              ? "Sign in to track your peptides."
+              : "Free. Just an email and a password."}
+          </p>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Email</label>
               <input
                 type="email"
                 placeholder="you@email.com"
@@ -65,17 +112,63 @@ export default function AuthScreen() {
                 autoComplete="email"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-3 text-white focus:border-lime-400 focus:outline-none"
               />
-              <button
-                onClick={submit}
-                disabled={!email.trim() || sending}
-                className="w-full py-3 bg-lime-400 text-zinc-950 rounded-lg font-bold hover:bg-lime-300 disabled:opacity-40 flex items-center justify-center gap-2"
-              >
-                {sending ? "Sending..." : (<>Send magic link <ArrowRight className="w-4 h-4" /></>)}
-              </button>
-              {error && <div className="text-red-400 text-xs">{error}</div>}
             </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Password</label>
+              <input
+                type="password"
+                placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submit()}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-3 text-white focus:border-lime-400 focus:outline-none"
+              />
+            </div>
+
+            <button
+              onClick={submit}
+              disabled={!email.trim() || !password || loading}
+              className="w-full py-3 bg-lime-400 text-zinc-950 rounded-lg font-bold hover:bg-lime-300 disabled:opacity-40 flex items-center justify-center gap-2 mt-1"
+            >
+              {loading ? (
+                mode === "signin" ? "Signing in..." : "Creating account..."
+              ) : (
+                <>
+                  {mode === "signin" ? "Sign in" : "Create account"}
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            {error && <div className="text-red-400 text-xs pt-1">{error}</div>}
+            {info && (
+              <div className="bg-lime-400/10 border border-lime-400/30 rounded-lg p-3 mt-2 flex gap-2.5">
+                <Mail className="w-4 h-4 text-lime-400 mt-0.5 flex-shrink-0" />
+                <div className="text-zinc-200 text-xs leading-relaxed">{info}</div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        <div className="text-center text-zinc-600 text-xs mt-5">
+          {mode === "signin" ? (
+            <>
+              No account?{" "}
+              <button onClick={() => switchMode("signup")} className="text-lime-400 hover:text-lime-300">
+                Create one — it's free
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <button onClick={() => switchMode("signin")} className="text-lime-400 hover:text-lime-300">
+                Sign in
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
