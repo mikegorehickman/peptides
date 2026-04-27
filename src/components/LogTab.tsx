@@ -10,10 +10,17 @@ type Props = {
   goToPeptides: () => void;
 };
 
+function todayLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export default function LogTab({ peptides, doses, onChange, goToPeptides }: Props) {
-  const today = new Date().toISOString().split("T")[0];
   const [peptideId, setPeptideId] = useState(peptides[0]?.id || "");
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(todayLocal);
   const [time, setTime] = useState<"AM" | "PM">(new Date().getHours() < 12 ? "AM" : "PM");
   const [units, setUnits] = useState("");
   const [saving, setSaving] = useState(false);
@@ -21,6 +28,13 @@ export default function LogTab({ peptides, doses, onChange, goToPeptides }: Prop
   useEffect(() => {
     if (!peptideId && peptides.length) setPeptideId(peptides[0].id);
   }, [peptides, peptideId]);
+
+  // Re-sync date to "today" whenever the tab is shown (e.g., after midnight rollover)
+  useEffect(() => {
+    setDate(todayLocal());
+    setTime(new Date().getHours() < 12 ? "AM" : "PM");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const peptide = peptides.find((p) => p.id === peptideId);
   const mcg = peptide && units ? (parseFloat(units) * peptide.mcg_per_unit).toFixed(1) : "0";
@@ -41,6 +55,8 @@ export default function LogTab({ peptides, doses, onChange, goToPeptides }: Prop
       return;
     }
     setUnits("");
+    setDate(todayLocal());
+    setTime(new Date().getHours() < 12 ? "AM" : "PM");
     onChange();
   };
 

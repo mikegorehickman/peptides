@@ -35,7 +35,9 @@ export default function ReportTab({ doses }: Props) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `peptide-doses-${new Date().toISOString().split("T")[0]}.csv`;
+    const now = new Date();
+    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    a.download = `peptide-doses-${localDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -66,11 +68,14 @@ export default function ReportTab({ doses }: Props) {
     });
     const totals = Object.values(totalsMap).sort((a, b) => b.totalMcg - a.totalMcg);
 
+    const localIso = (dt: Date) =>
+      `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+
     const days: any[] = [];
     for (let i = 6; i >= 0; i--) {
       const day = new Date(end);
       day.setDate(day.getDate() - i);
-      const iso = day.toISOString().split("T")[0];
+      const iso = localIso(day);
       const entry: any = { date: iso, label: day.toLocaleDateString("en-US", { weekday: "short" }) };
       inRange.filter((d) => d.date === iso).forEach((d) => {
         entry[d.peptide_name] = (entry[d.peptide_name] || 0) + Number(d.mcg);
