@@ -1,130 +1,108 @@
 # Peptide Tracker — Setup
 
-Database is **already provisioned** in your existing PCC Supabase project (`llfthegtjaexlyuywize`).  
-Tables use `pep_` prefix to stay isolated from PCC (`pcc_*`). Zero cost impact.
+The whole database lives in one file: `supabase/migrations/001_init.sql`.
+Run it on any Supabase project, point the app at that project, done.
 
-All you need to do: **deploy the frontend to Netlify**.
-
----
-
-## What's already done
-
-- ✅ Tables created: `pep_peptides`, `pep_doses`
-- ✅ RLS policies active (data scoped to your auth user)
-- ✅ SECURITY DEFINER RPCs installed:
-  - `pep_insert_peptide(name, mg, ml)`
-  - `pep_delete_peptide(peptide_id)`
-  - `pep_insert_dose(peptide_id, date, time_of_day, units)` — auto-computes mcg
-  - `pep_delete_dose(dose_id)`
-- ✅ `.env` file pre-populated with your Supabase URL + anon key
+It works on a **new project** or an **existing one** (like PCC). Every table and
+function starts with `pep_`, so nothing else gets touched.
 
 ---
 
-## Step 1 — Test locally (optional, 2 min)
+## Step 1 — Build the database (2 min)
 
-```bash
-cd peptide-tracker
-npm install
-npm run dev
+1. Open [supabase.com/dashboard](https://supabase.com/dashboard) and pick a project
+   (or click **New project**. The free tier is fine.)
+2. Go to **SQL Editor → New query**
+3. Paste in all of `supabase/migrations/001_init.sql` and click **Run**
+4. Check **Table Editor**. You should see `pep_peptides` and `pep_doses`.
+
+That creates:
+- Tables `pep_peptides`, `pep_doses`
+- RLS: you can only read your own rows
+- Write functions (RPCs): `pep_insert_peptide`, `pep_delete_peptide`,
+  `pep_insert_dose` (works out mcg for you), `pep_delete_dose`
+
+You can run the script more than once. It won't break anything.
+
+---
+
+## Step 2 — Auth settings
+
+Go to **Authentication → URL Configuration**:
+- **Site URL**: your Netlify URL (e.g. `https://peptides-mike.netlify.app`)
+- **Redirect URLs**: add your Netlify URL, your custom domain if you have one, and
+  `http://localhost:5173`. On a shared project like PCC, **add** these. Don't remove
+  the URLs already there.
+
+Optional: to skip the confirmation email, turn off
+**Authentication → Sign In / Providers → Email → Confirm email**.
+
+---
+
+## Step 3 — Point the app at the project
+
+Go to **Project Settings → API Keys** and copy:
+- Project URL (`https://<ref>.supabase.co`)
+- Publishable / anon key (`sb_publishable_...` or the legacy `anon` key)
+
+**Local:** copy `.env.example` to `.env` and fill in both values.
+
+**Netlify:** go to **Site configuration → Environment variables** and set:
 ```
+VITE_SUPABASE_URL=https://<ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<publishable key>
+```
+Then **Deploys → Trigger deploy → Clear cache and deploy site**. Vite bakes the
+env vars in at build time, so you have to rebuild after changing them.
 
-Open http://localhost:5173 → enter your email → check inbox → click magic link.
-
-**Before the magic link will work:** go to Supabase → **Authentication → URL Configuration** (PCC project) and add `http://localhost:5173` to the Redirect URLs list. Otherwise the magic link won't redirect back.
+The publishable key is safe in client code. RLS keeps your data private.
+**Never** use the `service_role` / secret key here.
 
 ---
 
-## Step 2 — Deploy to Netlify (5 min)
+## Step 4 — Make a new account
 
-### A. Push to GitHub
-```bash
-cd peptide-tracker
-git init
-git add .
-git commit -m "initial"
-# Create a new PRIVATE repo on github.com called peptide-tracker, then:
-git remote add origin https://github.com/YOUR_USER/peptide-tracker.git
-git push -u origin main
-```
-
-`.env` is gitignored, so your keys won't hit GitHub. You'll set them in Netlify instead.
-
-### B. Connect Netlify
-1. [app.netlify.com](https://app.netlify.com) → **Add new site → Import from Git**
-2. Pick your `peptide-tracker` repo
-3. Build auto-detects from `netlify.toml`:
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-4. Click **Add environment variables** and paste these exactly:
-
-```
-VITE_SUPABASE_URL=https://llfthegtjaexlyuywize.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_ueZwfmM-GBY79Qnd5uXpJw_YKEOSZlA
-```
-
-5. Click **Deploy site**
-
-### C. Whitelist the Netlify URL in Supabase
-Once Netlify gives you a URL (e.g. `https://peptides-mike.netlify.app`):
-
-- Supabase → PCC project → **Authentication → URL Configuration**
-- Add your Netlify URL to **Redirect URLs** (keep the PCC URL in there too — don't remove anything)
-
-### D. Optional: custom subdomain
-Netlify → **Domain settings** → add something like `peptides.paintergrowth.com`. Add that URL to Supabase Redirect URLs too.
+Your old login was in the deleted project, so it's gone. Open the app, tap
+**Sign up**, and use the same email. Then add your peptides again.
 
 ---
 
-## Step 3 — Install on iPhone
+## Install on iPhone
 
-1. Open the Netlify URL in Safari (not Chrome)
-2. Share button → **Add to Home Screen**
-3. Name it "Peptides" → Add
-4. Tap the icon — opens full screen, feels native
-
----
-
-## About auth + PCC coexisting
-
-Your peptide data and PCC customer data share the same Supabase auth system. That's fine because:
-
-- **RLS keeps data separate.** The peptide tables only return rows where `auth.uid() = user_id`. PCC customers who log in to their PCC account won't see your peptide data — they won't even know it exists.
-- **Magic links route per app.** The peptide tracker uses `emailRedirectTo = window.location.origin`, so your link sends you to the peptide app, not PCC.
-- **One user = one set of data.** First time you log in with your email, Supabase creates a user for you (if one doesn't already exist). Your peptide data attaches to that `user_id` forever.
+Open the site in Safari → Share → **Add to Home Screen**.
 
 ---
 
 ## How the math works
 
-Standard U-100 insulin syringe: **100 units = 1 ml**
+U-100 insulin syringe: **100 units = 1 ml**
 
 `mcg per unit = (mg in vial × 10) / ml of water added`
 
-Example: 10mg BPC-157 + 2ml bacteriostatic water → 50 mcg/unit. 20 units = 1000 mcg = 1 mg.
-
-Stored as a generated column in Postgres — always consistent with the vial setup.
+Example: 10 mg BPC-157 + 2 ml bac water = 50 mcg/unit. 20 units = 1000 mcg = 1 mg.
 
 ---
 
 ## Troubleshooting
 
-**Magic link opens but I'm not logged in**  
-Your current URL isn't in the Supabase Redirect URLs list. Add it.
+**"Could not find the function pep_insert_peptide" / table not found**
+The SQL didn't run on *this* project, or the API hasn't reloaded yet. Run the script
+again. It ends with `notify pgrst, 'reload schema'`.
 
-**"Not authenticated" error on saving**  
-Session expired. Hard refresh. If it keeps happening, check that the `.env` values match what's in Supabase (Settings → API).
+**"Invalid API key" / blank screen**
+The Netlify env vars are wrong or still point at the old project. Fix them, then
+clear the cache and redeploy.
 
-**Can't save a dose — "peptide not found"**  
-The peptide_id doesn't belong to your auth user. Usually happens if you manually edited rows. Recreate the peptide.
+**Confirmation link opens but you're not logged in**
+That URL is missing from Redirect URLs.
 
-**Want to wipe all peptide data**  
-Supabase SQL Editor:
-```sql
-delete from pep_doses where user_id = auth.uid();
-delete from pep_peptides where user_id = auth.uid();
-```
+**"not authenticated" when saving**
+Your session expired. Hard refresh and log in again.
 
-**Want to completely remove the peptide tracker from Supabase later**  
+---
+
+## Remove it later
+
 ```sql
 drop table if exists pep_doses cascade;
 drop table if exists pep_peptides cascade;
@@ -133,15 +111,3 @@ drop function if exists pep_delete_peptide;
 drop function if exists pep_insert_dose;
 drop function if exists pep_delete_dose;
 ```
-PCC stays untouched.
-
----
-
-## Your credentials (also in .env)
-
-```
-Project URL:  https://llfthegtjaexlyuywize.supabase.co
-Anon key:     sb_publishable_ueZwfmM-GBY79Qnd5uXpJw_YKEOSZlA
-```
-
-The anon key is **safe to embed in client code** — it's public by design. RLS is what keeps your data private.
