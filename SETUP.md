@@ -29,13 +29,15 @@ You can run the script more than once. It won't break anything.
 ## Step 2 — Auth settings
 
 Go to **Authentication → URL Configuration**:
-- **Site URL**: your Netlify URL (e.g. `https://peptides-mike.netlify.app`)
-- **Redirect URLs**: add your Netlify URL, your custom domain if you have one, and
-  `http://localhost:5173`. On a shared project like PCC, **add** these. Don't remove
-  the URLs already there.
+- **Redirect URLs**: add your Netlify URL (e.g. `https://peptides-mgh.netlify.app`),
+  your custom domain if you have one, and `http://localhost:5173`. Don't remove the
+  URLs already there.
+- **Site URL**: on a **new, peptides-only** project, set it to your Netlify URL.
+  On a **shared** project like PCC, **leave it alone**. PCC's emails use it.
 
-Optional: to skip the confirmation email, turn off
-**Authentication → Sign In / Providers → Email → Confirm email**.
+Optional, **new project only**: to skip the confirmation email, turn off
+**Authentication → Sign In / Providers → Email → Confirm email**. Don't do this on
+PCC. It turns off email confirmation for every PCC user too.
 
 ---
 
