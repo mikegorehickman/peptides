@@ -1,7 +1,8 @@
 -- ============================================================================
 -- PEPTIDE TRACKER — SCHEMA
--- ALREADY APPLIED to project llfthegtjaexlyuywize as migration peptide_tracker_init
--- This file is kept for reference only.
+-- Paste this whole file into Supabase → SQL Editor → Run.
+-- Safe on a brand-new project OR an existing one (all objects are pep_* and
+-- the script is re-runnable).
 -- ============================================================================
 
 create extension if not exists "pgcrypto";
@@ -46,6 +47,11 @@ drop policy if exists "pep read own doses" on public.pep_doses;
 create policy "pep read own doses" on public.pep_doses
   for select using (auth.uid() = user_id);
 
+-- Explicit grants (newer Supabase projects don't auto-expose public tables)
+grant usage on schema public to authenticated;
+grant select on public.pep_peptides, public.pep_doses to authenticated;
+revoke insert, update, delete on public.pep_peptides, public.pep_doses from anon, authenticated;
+
 -- All writes go through SECURITY DEFINER RPCs below
 
 -- ---------- RPCs ----------
@@ -72,6 +78,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.pep_insert_peptide(text, numeric, numeric) from public, anon;
 grant execute on function public.pep_insert_peptide(text, numeric, numeric) to authenticated;
 
 create or replace function public.pep_delete_peptide(p_peptide_id uuid)
@@ -90,6 +97,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.pep_delete_peptide(uuid) from public, anon;
 grant execute on function public.pep_delete_peptide(uuid) to authenticated;
 
 create or replace function public.pep_insert_dose(
@@ -135,6 +143,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.pep_insert_dose(uuid, date, text, numeric) from public, anon;
 grant execute on function public.pep_insert_dose(uuid, date, text, numeric) to authenticated;
 
 create or replace function public.pep_delete_dose(p_dose_id uuid)
@@ -153,4 +162,8 @@ begin
 end;
 $$;
 
+revoke execute on function public.pep_delete_dose(uuid) from public, anon;
 grant execute on function public.pep_delete_dose(uuid) to authenticated;
+
+-- Tell the API layer to pick up the new tables/functions immediately
+notify pgrst, 'reload schema';
